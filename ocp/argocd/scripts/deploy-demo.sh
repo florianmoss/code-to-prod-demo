@@ -11,8 +11,8 @@ echo ""
 rm -rf /var/tmp/code-to-prod-demo/
 mkdir -p /var/tmp/code-to-prod-demo/
 echo "Deploy Argo CD"
-oc create namespace argocd
-cat <<EOF | oc -n argocd create -f -
+~/oc create namespace argocd
+cat <<EOF | ~/oc -n argocd create -f -
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
@@ -21,7 +21,7 @@ spec:
   targetNamespaces:
   - argocd
 EOF
-cat <<EOF | oc -n argocd create -f -
+cat <<EOF | ~/oc -n argocd create -f -
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
@@ -35,7 +35,7 @@ EOF
 # TODO: wait for subscription instead of sleeping
 sleep 120
 # Create ArgoCD instance
-cat <<EOF | oc -n argocd apply -f -
+cat <<EOF | ~/oc -n argocd apply -f -
 apiVersion: argoproj.io/v1alpha1
 kind: ArgoCD
 metadata:
@@ -69,9 +69,9 @@ spec:
     scopes: '[groups]'
 EOF
 sleep 120
-ARGOCD_PASSWORD=$(oc -n argocd get secret argocd-cluster -o jsonpath='{.data.admin\.password}' | base64 -d)
+ARGOCD_PASSWORD=$(~/oc -n argocd get secret argocd-cluster -o jsonpath='{.data.admin\.password}' | base64 -d)
 echo "Deploy Tekton Pipelines and Events"
-cat <<EOF | oc -n openshift-operators create -f -
+cat <<EOF | ~/oc -n openshift-operators create -f -
 apiVersion: operators.coreos.com/v1alpha1
 kind: Subscription
 metadata:
@@ -92,40 +92,40 @@ cd /var/tmp/code-to-prod-demo/reverse-words-cicd
 git checkout ci
 sleep 10
 echo "Create Tekton resources for the demo"
-oc create namespace reversewords-ci
+~/oc create namespace reversewords-ci
 sed -i "s/<username>/$QUAY_USER/" quay-credentials.yaml
 sed -i "s/<password>/$QUAY_PASSWORD/" quay-credentials.yaml
-oc -n reversewords-ci create secret generic image-updater-secret --from-literal=token=${GIT_AUTH_TOKEN}
-oc -n reversewords-ci create -f quay-credentials.yaml
-oc -n reversewords-ci create -f pipeline-sa.yaml
-oc -n reversewords-ci create -f lint-task.yaml
-oc -n reversewords-ci create -f test-task.yaml
-oc -n reversewords-ci create -f build-task.yaml
-oc -n reversewords-ci create -f image-updater-task.yaml
+~/oc -n reversewords-ci create secret generic image-updater-secret --from-literal=token=${GIT_AUTH_TOKEN}
+~/oc -n reversewords-ci create -f quay-credentials.yaml
+~/oc -n reversewords-ci create -f pipeline-sa.yaml
+~/oc -n reversewords-ci create -f lint-task.yaml
+~/oc -n reversewords-ci create -f test-task.yaml
+~/oc -n reversewords-ci create -f build-task.yaml
+~/oc -n reversewords-ci create -f image-updater-task.yaml
 sed -i "s|<reversewords_git_repo>|https://github.com/florianmoss/reverse-words|" build-pipeline.yaml
 sed -i "s|<reversewords_quay_repo>|quay.io/fmoss/tekton-reversewords|" build-pipeline.yaml
 sed -i "s|<golang_package>|github.com/florianmoss/reverse-words|" build-pipeline.yaml
 sed -i "s|<imageBuilder_sourcerepo>|florianmoss/reverse-words-cicd|" build-pipeline.yaml
-oc -n reversewords-ci create -f build-pipeline.yaml
-oc -n reversewords-ci create -f webhook-roles.yaml
-oc -n reversewords-ci create -f github-triggerbinding.yaml
+~/oc -n reversewords-ci create -f build-pipeline.yaml
+~/oc -n reversewords-ci create -f webhook-roles.yaml
+~/oc -n reversewords-ci create -f github-triggerbinding.yaml
 WEBHOOK_SECRET="v3r1s3cur3"
-oc -n reversewords-ci create secret generic webhook-secret --from-literal=secret=${WEBHOOK_SECRET}
+~/oc -n reversewords-ci create secret generic webhook-secret --from-literal=secret=${WEBHOOK_SECRET}
 sed -i "s/<git-triggerbinding>/github-triggerbinding/" webhook.yaml
 sed -i "s/- name: pipeline-binding/- name: github-triggerbinding/" webhook.yaml
-oc -n reversewords-ci create -f webhook.yaml
-oc -n reversewords-ci create -f curl-task.yaml
-oc -n reversewords-ci create -f get-stage-release-task.yaml
+~/oc -n reversewords-ci create -f webhook.yaml
+~/oc -n reversewords-ci create -f curl-task.yaml
+~/oc -n reversewords-ci create -f get-stage-release-task.yaml
 sed -i "s|<reversewords_cicd_git_repo>|https://github.com/florianmoss/reverse-words-cicd|" promote-to-prod-pipeline.yaml
 sed -i "s|<reversewords_quay_repo>|quay.io/fmoss/tekton-reversewords|" promote-to-prod-pipeline.yaml
 sed -i "s|<imageBuilder_sourcerepo>|florianmoss/reverse-words-cicd|" promote-to-prod-pipeline.yaml
 sed -i "s|<stage_deployment_file_path>|./deployment.yaml|" promote-to-prod-pipeline.yaml
-oc -n reversewords-ci create -f promote-to-prod-pipeline.yaml
-oc -n reversewords-ci create route edge reversewords-webhook --service=el-reversewords-webhook --port=8080 --insecure-policy=Redirect
+~/oc -n reversewords-ci create -f promote-to-prod-pipeline.yaml
+~/oc -n reversewords-ci create route edge reversewords-webhook --service=el-reversewords-webhook --port=8080 --insecure-policy=Redirect
 sleep 15
-ARGOCD_ROUTE=$(oc -n argocd get route argocd-server -o jsonpath='{.spec.host}')
-argocd login $ARGOCD_ROUTE --insecure --username admin --password $ARGOCD_PASSWORD
-CONSOLE_ROUTE=$(oc -n openshift-console get route console -o jsonpath='{.spec.host}')
+ARGOCD_ROUTE=$(~/oc -n argocd get route argocd-server -o jsonpath='{.spec.host}')
+~/argocd login $ARGOCD_ROUTE --insecure --username admin --password $ARGOCD_PASSWORD
+CONSOLE_ROUTE=$(~/oc -n openshift-console get route console -o jsonpath='{.spec.host}')
 echo "Argo CD Console: $ARGOCD_ROUTE"
 echo "Argo CD Admin Password: $ARGOCD_PASSWORD"
 echo "OCP Console: $CONSOLE_ROUTE"
