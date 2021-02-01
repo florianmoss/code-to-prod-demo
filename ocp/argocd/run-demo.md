@@ -17,7 +17,7 @@
     > **NOTE**: Use your fork on the command below
 
     ~~~sh
-    argocd repo add https://github.com/florianmoss/reverse-words-cicd.git --name reversewords-cicd
+    ~/argocd repo add https://github.com/florianmoss/reverse-words-cicd.git --name reversewords-cicd
     ~~~
 2. Edit the ingresses for our applications before creating them in Argo CD
 
@@ -25,7 +25,7 @@
 
     ~~~sh
     cd /var/tmp/code-to-prod-demo/reverse-words-cicd
-    CLUSTER_WILDCARD=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{ .spec.domain }')
+    CLUSTER_WILDCARD=$(~/oc get ingresses.config.openshift.io cluster -o jsonpath='{ .spec.domain }')
     # Stash previous changes
     git stash
     # Update staging ingress  
@@ -46,7 +46,7 @@
     > **NOTE**: Use your fork on the command below
 
     ~~~sh
-    argocd app create --project default --name reverse-words-stage \
+    ~/argocd app create --project default --name reverse-words-stage \
     --repo https://github.com/florianmoss/reverse-words-cicd.git \
     --path . \
     --dest-server https://kubernetes.default.svc \
@@ -58,7 +58,7 @@
     > **NOTE**: Use your fork on the command below
 
     ~~~sh
-    argocd app create --project default --name reverse-words-production \
+    ~/argocd app create --project default --name reverse-words-production \
     --repo https://github.com/florianmoss/reverse-words-cicd.git \
     --path . \
     --dest-server https://kubernetes.default.svc \
